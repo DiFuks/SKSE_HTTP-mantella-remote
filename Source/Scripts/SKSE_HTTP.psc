@@ -64,3 +64,5 @@ VoiceType Function GetVoiceType(Actor actor) global native
 Function SetVoiceType(Actor actor, VoiceType voice) global native
 VoiceType Function GetRaceDefaultVoiceType(Actor actor) global native
 Function SetRaceDefaultVoiceType(Actor actor, VoiceType voice) global native
+
+Function launchHttpServer(int port) global native

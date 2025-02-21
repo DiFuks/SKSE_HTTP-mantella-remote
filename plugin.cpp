@@ -1,3 +1,5 @@
+//#define CPPHTTPLIB_OPENSSL_SUPPORT
+#include "include/httplib.h"
 #include <stdio.h>
 #include <Shlobj.h>
 #include <cpr\cpr.h>
@@ -9,6 +11,7 @@
 
 using json = nlohmann::json;
 using namespace SKSE_HTTP_TypedDictionary;
+using namespace httplib;
 
 
 void InitializeLogging() {
@@ -395,6 +398,26 @@ void SetRaceDefaultVoiceType(RE::StaticFunctionTag*, RE::Actor* actor, RE::BGSVo
 //  Returns true, if the container has @key: value pair
 bool hasKeyRelay(RE::StaticFunctionTag*, int object, std::string key) { return hasKey(object, key); };
 
+void launchHttpServer(int port) {
+    Server svr;
+    
+    svr.Post("/skyrim",
+             [&](const httplib::Request&, httplib::Response& res) { res.set_content("Hello World!", "text/plain"); });
+    //auto thread = std::thread([&]() { svr.listen("127.0.0.1", port); });
+    
+    //thread.detach();
+    std::thread([&]() { svr.listen("127.0.0.1", port); }).detach();
+    //svr.listen("localhost", port);
+
+    /*auto se = httplib::detail::scope_exit([&] {
+        svr.stop();
+        thread.join();
+    });*/
+
+    svr.wait_until_ready();
+}
+
+void launchHttpServerRelay(RE::StaticFunctionTag*, int port) { launchHttpServer(port); }
 
 bool Bind(RE::BSScript::IVirtualMachine* vm) {
     std::string className = "SKSE_HTTP";
@@ -432,12 +455,17 @@ bool Bind(RE::BSScript::IVirtualMachine* vm) {
     vm->RegisterFunction("SetRaceDefaultVoiceType", className, SetRaceDefaultVoiceType);
 
     vm->RegisterFunction("hasKey", className, hasKeyRelay);
+
+    vm->RegisterFunction("launchHttpServer", className, launchHttpServerRelay);
     return true;
 };
 
+
 SKSEPluginLoad(const SKSE::LoadInterface* skse) {
     SKSE::Init(skse);
-    //InitializeLogging();
+    InitializeLogging();
     SKSE::GetPapyrusInterface()->Register(Bind);
+    launchHttpServer(5005);
     return true;
 };
+
