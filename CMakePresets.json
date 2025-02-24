@@ -11,16 +11,16 @@
         "value": "x64",
         "strategy": "external"
       },
-      "cacheVariables": {
-        "CMAKE_MAKE_PROGRAM":"C:/PROGRAM FILES/MICROSOFT VISUAL STUDIO/2022/COMMUNITY/COMMON7/IDE/COMMONEXTENSIONS/MICROSOFT/CMAKE/Ninja/ninja.exe",
-        "CMAKE_CXX_COMPILER": "cl.exe",
-        "CMAKE_CXX_FLAGS": "/permissive- /Zc:preprocessor /EHsc /MP /W4 -DWIN32_LEAN_AND_MEAN -DNOMINMAX -DUNICODE -D_UNICODE",
-        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "VCPKG_TARGET_TRIPLET": "x64-windows-static-md",
-        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake",
-        "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
-      },
+        "cacheVariables": {
+            "CMAKE_MAKE_PROGRAM": "C:/VS2022/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe",
+            "CMAKE_CXX_COMPILER": "cl.exe",
+            "CMAKE_CXX_FLAGS": "/permissive- /Zc:preprocessor /EHsc /MP /W4 -DWIN32_LEAN_AND_MEAN -DNOMINMAX -DUNICODE -D_UNICODE",
+            "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+            "VCPKG_TARGET_TRIPLET": "x64-windows-static-md",
+            "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake",
+            "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL",
+            "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+        },
       "environment": {
         "SKYRIM_MODS_FOLDER": "C:/Users/TK/AppData/Local/ModOrganizer/Skyrim Special Edition Development/mods" 
       }

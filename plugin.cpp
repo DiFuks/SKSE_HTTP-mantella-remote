@@ -21,7 +21,7 @@ void InitializeLogging() {
 
     // Force proper path, otherwise the files end up in 'Skyrim.INI/SKSE'
     std::filesystem::path path(userpath);
-    path /= "Skyrim Special Edition/SKSE/SKSE_HTTP.log";
+    path /= "My Games/Skyrim Special Edition/SKSE/SKSE_HTTP.log";
 
 
     auto sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(path.string(), true);
@@ -32,7 +32,7 @@ void InitializeLogging() {
     log->flush_on(spdlog::level::trace);
 
     spdlog::set_default_logger(std::move(log));
-    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%l] [%t] [%s:%#] %v");
+    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] [%t] [%s:%#] %v");
     //spdlog::set_pattern("[%T.%e] [%=5t] [%L] %v"s);
     }
 
@@ -398,15 +398,41 @@ void SetRaceDefaultVoiceType(RE::StaticFunctionTag*, RE::Actor* actor, RE::BGSVo
 //  Returns true, if the container has @key: value pair
 bool hasKeyRelay(RE::StaticFunctionTag*, int object, std::string key) { return hasKey(object, key); };
 
-void launchHttpServer(int port) {
+// Thread function for HTTP server
+void http_server_fn(int port) {
     Server svr;
-    
+
+    SKSE::log::info("http_server_fn 0, {0:d}", port);
+    svr.set_logger([](const httplib::Request& req, const httplib::Response& res) {
+        SKSE::log::info("SvrLog req: {} \nres: {}", req.body, res.body);
+        });
+
     svr.Post("/skyrim",
-             [&](const httplib::Request&, httplib::Response& res) { res.set_content("Hello World!", "text/plain"); });
+        [&](const httplib::Request& req, httplib::Response& res) {
+        SKSE::log::info("http get {}", req.body);
+
+        res.set_content("Hello World!", "text/plain");
+        });
+    
+    //svr.wait_until_ready();
+    svr.listen("127.0.0.1", port);
+    }
+
+void launchHttpServer(int port) {
+    SKSE::log::info("launch");
+
+    std::thread http_thread(http_server_fn, port);
+    SKSE::log::info("Thread created");
+
+    http_thread.detach();
+    SKSE::log::info("Thread detached");
+
+    //svr.Get("/skyrim",
+    //         [&](const httplib::Request&, httplib::Response& res) { res.set_content("Hello World!", "text/plain"); });
     //auto thread = std::thread([&]() { svr.listen("127.0.0.1", port); });
     
     //thread.detach();
-    std::thread([&]() { svr.listen("127.0.0.1", port); }).detach();
+    //std::thread([&]() { svr.listen("127.0.0.1", port); }).detach();
     //svr.listen("localhost", port);
 
     /*auto se = httplib::detail::scope_exit([&] {
@@ -414,7 +440,7 @@ void launchHttpServer(int port) {
         thread.join();
     });*/
 
-    svr.wait_until_ready();
+    //svr.wait_until_ready();
 }
 
 void launchHttpServerRelay(RE::StaticFunctionTag*, int port) { launchHttpServer(port); }
@@ -464,6 +490,7 @@ bool Bind(RE::BSScript::IVirtualMachine* vm) {
 SKSEPluginLoad(const SKSE::LoadInterface* skse) {
     SKSE::Init(skse);
     InitializeLogging();
+    SKSE::log::info("Plugin Load");
     SKSE::GetPapyrusInterface()->Register(Bind);
     launchHttpServer(5005);
     return true;
