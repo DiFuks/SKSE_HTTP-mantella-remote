@@ -2,6 +2,12 @@ scriptName SKSE_HTTP hidden
 
 function sendLocalhostHttpRequest(int typedDictionaryHandle, int port, string route, int timeout = 0) global native
 
+;/  Same as sendLocalhostHttpRequest but with an arbitrary host (e.g. server
+    running on a different machine reachable over LAN). Empty host falls back
+    to 127.0.0.1.
+/;
+function sendHttpRequest(int typedDictionaryHandle, string host, int port, string route, int timeout = 0) global native
+
 ;/  Synchronous binary HTTP GET. Downloads @url into @localPath (creates parent
     directories if needed). Returns true on HTTP 200 + write success.
     @connectTimeoutMs: connection timeout in ms (default 5000)

@@ -169,18 +169,13 @@ void postCallbackMethod(cpr::Response response)
     }
 }
 
-void sendLocalhostHttpRequest(RE::StaticFunctionTag*, int typedDictionaryHandle, int port, std::string route, int timeout)
+static void sendHttpRequestImpl(int typedDictionaryHandle, const std::string& host, int port, std::string route, int timeout)
 {
     try {
         toLowerCase(&route);
-        auto start_jsonfromhandle = std::chrono::steady_clock::now();
         json newJson = getJsonFromHandle(typedDictionaryHandle);
-        auto start_send = std::chrono::steady_clock::now();
         std::string textToSend = newJson.dump();
-        // Use explicit IPv4 loopback. On hosts where localhost can resolve to IPv6 first
-        // (incl. Wine on Android via box64), `localhost` tries ::1 and fails because
-        // adb reverse only forwards TCP IPv4. 127.0.0.1 sidesteps the resolution choice.
-        std::string url = "http://127.0.0.1:" + std::to_string(port) + "/" + route;
+        std::string url = "http://" + host + ":" + std::to_string(port) + "/" + route;
         cpr::PostCallback(postCallbackMethod, cpr::Url{url}, cpr::ConnectTimeout{timeout},
                           cpr::Authentication{"user", "pass", cpr::AuthMode::BASIC},
                           cpr::Header{{"Content-Type", "application/json"}},
@@ -188,6 +183,22 @@ void sendLocalhostHttpRequest(RE::StaticFunctionTag*, int typedDictionaryHandle,
     } catch (...) {
 
     }
+}
+
+void sendLocalhostHttpRequest(RE::StaticFunctionTag*, int typedDictionaryHandle, int port, std::string route, int timeout)
+{
+    // 127.0.0.1 explicitly (not "localhost") — on Wine on Android `localhost`
+    // can resolve to IPv6 first and adb reverse only forwards IPv4.
+    sendHttpRequestImpl(typedDictionaryHandle, "127.0.0.1", port, route, timeout);
+};
+
+void sendHttpRequest(RE::StaticFunctionTag*, int typedDictionaryHandle, std::string host, int port, std::string route, int timeout)
+{
+    // Same protocol as sendLocalhostHttpRequest but with an arbitrary host so
+    // the Mantella server can live on a different machine (e.g. Mac + Android
+    // handheld over LAN). If host is empty, falls back to IPv4 loopback.
+    if (host.empty()) host = "127.0.0.1";
+    sendHttpRequestImpl(typedDictionaryHandle, host, port, route, timeout);
 };
 
 bool downloadFileFromUrl(RE::StaticFunctionTag*, std::string url, std::string localPath, int connectTimeoutMs, int totalTimeoutMs) {
@@ -431,6 +442,7 @@ bool hasKeyRelay(RE::StaticFunctionTag*, int object, std::string key) { return h
 bool Bind(RE::BSScript::IVirtualMachine* vm) {
     std::string className = "SKSE_HTTP";
     vm->RegisterFunction("sendLocalhostHttpRequest", className, sendLocalhostHttpRequest);
+    vm->RegisterFunction("sendHttpRequest", className, sendHttpRequest);
     vm->RegisterFunction("downloadFileFromUrl", className, downloadFileFromUrl);
 
     vm->RegisterFunction("createDictionary", className, createDictionaryRelay);
