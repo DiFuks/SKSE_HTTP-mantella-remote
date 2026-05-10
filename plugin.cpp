@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <Shlobj.h>
+#include <filesystem>
+#include <fstream>
+#include <system_error>
 #include <cpr\cpr.h>
 #include <SKSE_HTTP_TypedDictionary.h>
 #include <nlohmann\json.hpp>
@@ -180,7 +183,33 @@ void sendLocalhostHttpRequest(RE::StaticFunctionTag*, int typedDictionaryHandle,
                           cpr::Header{{"Content-Type", "application/json"}},
                           cpr::Header{{"accept", "application/json"}}, cpr::Body{textToSend});
     } catch (...) {
-    
+
+    }
+};
+
+bool downloadFileFromUrl(RE::StaticFunctionTag*, std::string url, std::string localPath, int connectTimeoutMs, int totalTimeoutMs) {
+    try {
+        std::filesystem::path target(localPath);
+        std::error_code ec;
+        if (target.has_parent_path()) {
+            std::filesystem::create_directories(target.parent_path(), ec);
+        }
+        cpr::Response r = cpr::Get(
+            cpr::Url{url},
+            cpr::ConnectTimeout{connectTimeoutMs > 0 ? connectTimeoutMs : 5000},
+            cpr::Timeout{totalTimeoutMs > 0 ? totalTimeoutMs : 30000});
+        if (r.status_code != 200) {
+            return false;
+        }
+        std::ofstream out(localPath, std::ios::binary | std::ios::trunc);
+        if (!out.is_open()) {
+            return false;
+        }
+        out.write(r.text.data(), static_cast<std::streamsize>(r.text.size()));
+        out.close();
+        return out.good();
+    } catch (...) {
+        return false;
     }
 };
 
@@ -399,6 +428,7 @@ bool hasKeyRelay(RE::StaticFunctionTag*, int object, std::string key) { return h
 bool Bind(RE::BSScript::IVirtualMachine* vm) {
     std::string className = "SKSE_HTTP";
     vm->RegisterFunction("sendLocalhostHttpRequest", className, sendLocalhostHttpRequest);
+    vm->RegisterFunction("downloadFileFromUrl", className, downloadFileFromUrl);
 
     vm->RegisterFunction("createDictionary", className, createDictionaryRelay);
     vm->RegisterFunction("clearAllDictionaries", className, clearAllDictionaries);

@@ -2,6 +2,13 @@ scriptName SKSE_HTTP hidden
 
 function sendLocalhostHttpRequest(int typedDictionaryHandle, int port, string route, int timeout = 0) global native
 
+;/  Synchronous binary HTTP GET. Downloads @url into @localPath (creates parent
+    directories if needed). Returns true on HTTP 200 + write success.
+    @connectTimeoutMs: connection timeout in ms (default 5000)
+    @totalTimeoutMs: total request timeout in ms (default 30000)
+/;
+Bool function downloadFileFromUrl(string url, string localPath, int connectTimeoutMs = 5000, int totalTimeoutMs = 30000) global native
+
 function raiseOnHttpReplyReceived(int typedDictionaryHandle) global
     int handle = ModEvent.Create("SKSE_HTTP_OnHttpReplyReceived")
     if (handle)

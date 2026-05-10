@@ -1,0 +1,82 @@
+name: Build SKSE_HTTP
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}\vcpkg
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}\vcpkg-cache
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install Ninja
+        run: choco install ninja -y --no-progress
+        shell: pwsh
+
+      - name: Restore vcpkg binary cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-
+
+      - name: Bootstrap vcpkg
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git "$env:VCPKG_ROOT"
+          & "$env:VCPKG_ROOT\bootstrap-vcpkg.bat" -disableMetrics
+          New-Item -ItemType Directory -Force -Path "$env:VCPKG_DEFAULT_BINARY_CACHE" | Out-Null
+        shell: pwsh
+
+      - name: Configure (CMake Release)
+        run: |
+          cmake -S . -B build/release -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static-md `
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL `
+            -DCMAKE_CXX_FLAGS="/permissive- /Zc:preprocessor /EHsc /MP /W4 -DWIN32_LEAN_AND_MEAN -DNOMINMAX -DUNICODE -D_UNICODE"
+        shell: pwsh
+
+      - name: Build
+        run: cmake --build build/release --config Release
+        shell: pwsh
+
+      - name: Locate built DLL
+        id: locate
+        run: |
+          $dll = Get-ChildItem -Path build -Recurse -Filter SKSE_HTTP.dll | Select-Object -First 1
+          if (-not $dll) { Write-Error "SKSE_HTTP.dll not found"; exit 1 }
+          Write-Host "Found: $($dll.FullName)"
+          "dll_path=$($dll.FullName)" | Out-File -Append -Encoding utf8 -FilePath $env:GITHUB_OUTPUT
+        shell: pwsh
+
+      - name: Upload SKSE_HTTP.dll
+        uses: actions/upload-artifact@v4
+        with:
+          name: SKSE_HTTP-dll
+          path: ${{ steps.locate.outputs.dll_path }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload PDB (debug symbols)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: SKSE_HTTP-pdb
+          path: build/**/SKSE_HTTP.pdb
+          if-no-files-found: warn
+          retention-days: 7
