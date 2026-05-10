@@ -177,7 +177,10 @@ void sendLocalhostHttpRequest(RE::StaticFunctionTag*, int typedDictionaryHandle,
         json newJson = getJsonFromHandle(typedDictionaryHandle);
         auto start_send = std::chrono::steady_clock::now();
         std::string textToSend = newJson.dump();
-        std::string url = "http://localhost:" + std::to_string(port) + "/" + route;
+        // Use explicit IPv4 loopback. On hosts where localhost can resolve to IPv6 first
+        // (incl. Wine on Android via box64), `localhost` tries ::1 and fails because
+        // adb reverse only forwards TCP IPv4. 127.0.0.1 sidesteps the resolution choice.
+        std::string url = "http://127.0.0.1:" + std::to_string(port) + "/" + route;
         cpr::PostCallback(postCallbackMethod, cpr::Url{url}, cpr::ConnectTimeout{timeout},
                           cpr::Authentication{"user", "pass", cpr::AuthMode::BASIC},
                           cpr::Header{{"Content-Type", "application/json"}},
